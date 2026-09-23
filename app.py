@@ -1,6 +1,7 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+import koreanize_matplotlib
 
 st.set_page_config(layout="wide", page_title="FOPDT 공정 PID 튜닝 시뮬레이터")
 st.title("🎛️ FOPDT 공정 & 실시간 PID 튜닝 시뮬레이터")
@@ -77,7 +78,7 @@ fig, (ax1, ax2) = plt.subplots(
     2, 1, figsize=(10, 6), sharex=True, gridspec_kw={"height_ratios": [2, 1]}
 )
 
-ax1.plot(time, T, "m-", linewidth=2, label="PID 제어 온도")
+ax1.plot(time, T, "m-", linewidth=2, label=f"PID 제어 온도 (최종값: {T[-1]:.2f}℃)")
 ax1.axhline(
     setpoint,
     color="r",
