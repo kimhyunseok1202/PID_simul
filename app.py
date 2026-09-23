@@ -1,7 +1,11 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import koreanize_matplotlib
+import matplotlib.font_manager as fm
+
+# 리눅스 서버에 설치된 나눔폰트 적용 (윈도우/맥 호환 대비)
+plt.rcParams['font.family'] = 'NanumGothic'
+plt.rcParams['axes.unicode_minus'] = False
 
 st.set_page_config(layout="wide", page_title="FOPDT 공정 PID 튜닝 시뮬레이터")
 st.title("🎛️ FOPDT 공정 & 실시간 PID 튜닝 시뮬레이터")
