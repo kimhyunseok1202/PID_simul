@@ -1,9 +1,8 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 
-# 리눅스 서버에 설치된 나눔폰트 적용 (윈도우/맥 호환 대비)
+# 리눅스 서버에 설치된 나눔글꼴 적용 (packages.txt의 fonts-nanum 기준)
 plt.rcParams['font.family'] = 'NanumGothic'
 plt.rcParams['axes.unicode_minus'] = False
 
@@ -11,19 +10,30 @@ st.set_page_config(layout="wide", page_title="FOPDT 공정 PID 튜닝 시뮬레�
 st.title("🎛️ FOPDT 공정 & 실시간 PID 튜닝 시뮬레이터")
 
 # ---------------------------------------------------------
-# 좌측 사이드바: 공정 및 PID 튜닝 파라미터 조작 슬라이더
+# 좌측 사이드바: 슬라이더 + 숫자 직접 입력 동시 지원
 # ---------------------------------------------------------
 st.sidebar.header("1. 공정 파라미터 설정")
-setpoint = st.sidebar.slider("목표 온도 (℃)", 100.0, 1500.0, 1000.0, 10.0)
-tau = st.sidebar.slider("시상수 τ (s)", 50.0, 600.0, 300.0, 10.0)
-K_gain = st.sidebar.slider("공정 게인 K", 1.0, 30.0, 16.0, 1.0)
-delay_time = st.sidebar.slider("시간 지연 θ (s)", 0.0, 100.0, 30.0, 5.0)
-T_ambient = st.sidebar.slider("초기/외기 온도 (℃)", 0.0, 50.0, 25.0, 1.0)
 
+# 목표 온도
+setpoint = st.sidebar.number_input("목표 온도 (℃)", min_value=100.0, max_value=1500.0, value=1000.0, step=10.0)
+# 시상수 tau
+tau = st.sidebar.number_input("시상수 τ (s)", min_value=10.0, max_value=1000.0, value=300.0, step=10.0)
+# 공정 게인 K
+K_gain = st.sidebar.number_input("공정 게인 K", min_value=1.0, max_value=50.0, value=16.0, step=1.0)
+# 시간 지연 theta
+delay_time = st.sidebar.number_input("시간 지연 θ (s)", min_value=0.0, max_value=200.0, value=30.0, step=1.0)
+# 초기/외기 온도
+T_ambient = st.sidebar.number_input("초기/외기 온도 (℃)", min_value=0.0, max_value=100.0, value=25.0, step=1.0)
+
+st.sidebar.markdown("---")
 st.sidebar.header("2. PID 파라미터 튜닝")
-Kc = st.sidebar.slider("비례 게인 Kc", 0.01, 2.0, 0.3, 0.02)
-tau_I = st.sidebar.slider("적분 시간 τI (s)", 10.0, 1000.0, 200.0, 10.0)
-tau_D = st.sidebar.slider("미분 시간 τD (s)", 0.0, 100.0, 25.0, 1.0)
+
+# 비례 게인 Kc
+Kc = st.sidebar.number_input("비례 게인 Kc", min_value=0.001, max_value=5.0, value=0.3, step=0.01, format="%.3f")
+# 적분 시간 tau_I
+tau_I = st.sidebar.number_input("적분 시간 τI (s)", min_value=1.0, max_value=2000.0, value=200.0, step=5.0)
+# 미분 시간 tau_D
+tau_D = st.sidebar.number_input("미분 시간 τD (s)", min_value=0.0, max_value=200.0, value=25.0, step=1.0)
 
 # ---------------------------------------------------------
 # 시뮬레이션 계산 (오일러법)
@@ -47,13 +57,13 @@ for k in range(n_steps):
     # PID 계산 및 안티와인드업
     P_term = Kc * e
     D_term = Kc * tau_D * ((e - prev_error) / dt if k > 0 else 0.0)
-
+    
     I_term = (Kc / tau_I) * integral if tau_I > 0 else 0.0
     u_unsat = P_term + I_term + D_term
-
+    
     if not ((u_unsat >= 100.0 and e > 0) or (u_unsat <= 0.0 and e < 0)):
         integral += e * dt
-
+        
     I_term = (Kc / tau_I) * integral if tau_I > 0 else 0.0
     u_curr = np.clip(P_term + I_term + D_term, 0.0, 100.0)
     prev_error = e
@@ -78,27 +88,19 @@ col1.metric("최종 도달 온도", f"{T[-1]:.2f} ℃")
 col2.metric("최종 오차 (Final Error)", f"{final_error:.2f} ℃")
 col3.metric("최대 오버슈트 (Overshoot)", f"{overshoot:.2f} ℃")
 
-fig, (ax1, ax2) = plt.subplots(
-    2, 1, figsize=(10, 6), sharex=True, gridspec_kw={"height_ratios": [2, 1]}
-)
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
 
-ax1.plot(time, T, "m-", linewidth=2, label=f"PID 제어 온도 (최종값: {T[-1]:.2f}℃)")
-ax1.axhline(
-    setpoint,
-    color="r",
-    linestyle="--",
-    linewidth=1.2,
-    label=f"목표치 ({setpoint}℃)",
-)
+ax1.plot(time, T, 'm-', linewidth=2, label=f'PID 제어 온도 (최종값: {T[-1]:.2f}℃)')
+ax1.axhline(setpoint, color='r', linestyle='--', linewidth=1.2, label=f'목표치 ({setpoint}℃)')
 ax1.set_ylabel("온도 (℃)")
-ax1.grid(True, linestyle=":", alpha=0.6)
+ax1.grid(True, linestyle=':', alpha=0.6)
 ax1.legend(loc="lower right")
 
-ax2.plot(time, u, "g-", linewidth=1.5, label="히터 출력 u (%)")
+ax2.plot(time, u, 'g-', linewidth=1.5, label='히터 출력 u (%)')
 ax2.set_xlabel("시간 (s)")
 ax2.set_ylabel("출력 (%)")
 ax2.set_ylim([-5, 105])
-ax2.grid(True, linestyle=":", alpha=0.6)
+ax2.grid(True, linestyle=':', alpha=0.6)
 ax2.legend(loc="upper right")
 
 st.pyplot(fig)
