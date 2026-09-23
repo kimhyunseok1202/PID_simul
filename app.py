@@ -1,6 +1,6 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
 
 # 리눅스 서버에 설치된 나눔글꼴 적용 (packages.txt의 fonts-nanum 기준)
 plt.rcParams["font.family"] = "NanumGothic"
