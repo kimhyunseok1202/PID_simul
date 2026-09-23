@@ -2,23 +2,29 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 리눅스 서버에 설치된 나눔글꼴 적용 (packages.txt의 fonts-nanum 기준)
+리눅스 서버에 설치된 나눔글꼴 적용 (packages.txt의 fonts-nanum 기준)
+
 plt.rcParams["font.family"] = "NanumGothic"
 plt.rcParams["axes.unicode_minus"] = False
 
-# 브라우저 탭 및 메인 타이틀 설정
+브라우저 탭 및 메인 타이틀 설정
+
 st.set_page_config(layout="wide", page_title="실시간 PID 튜닝 시뮬레이터")
 st.title("🎛️ 실시간 PID 튜닝 시뮬레이터")
 
-# ---------------------------------------------------------
-# 상단: 시뮬레이터 사용 가이드라인 (접이식 안내창)
-# ---------------------------------------------------------
+---------------------------------------------------------
+
+상단: 시뮬레이터 사용 가이드라인 (접이식 안내창)
+
+---------------------------------------------------------
+
 with st.expander("📖 시뮬레이터 사용 가이드 및 PID 튜닝 요령 (클릭하여 열기)"):
-    st.markdown("""
-    ### 1. 시뮬레이터 조작 방법
-    * **파라미터 입력**: 좌측 사이드바에서 수치를 직접 입력하거나 `+ / -` 버튼으로 변경합니다.
-    * **그래프 표시 온/오프**: 좌측 사이드바의 '3. 그래프 표시 설정'에서 원하는 그래프만 선택적으로 켜고 끌 수 있습니다.
-    * **실시간 갱신**: 파라미터나 체크박스를 변경하면 우측 화면이 즉시 업데이트됩니다.
+st.markdown("""
+### 1. 시뮬레이터 조작 방법
+* 파라미터 입력: 좌측 사이드바에서 수치를 직접 입력하거나 + / - 버튼으로 변경합니다.
+* 그래프 표시 온/오프: 좌측 사이드바의 '3. 그래프 표시 설정'에서 원하는 그래프만 선택적으로 켜고 끌 수 있습니다.
+* 실시간 갱신: 파라미터나 체크박스를 변경하면 우측 화면이 즉시 업데이트됩니다.
+
 ### 2. 파라미터 용어 정리
 * **공정 파라미터 (Process Parameters)**
     * **목표 온도 (Setpoint)**: 도달하고자 하는 목표 온도 (기본 1000℃)
@@ -30,12 +36,18 @@ with st.expander("📖 시뮬레이터 사용 가이드 및 PID 튜닝 요령 (�
     * **적분 시간 \(\tau_I\) (Integral)**: 잔류 오차를 누적 계산해 제거. 작을수록 적분 작용이 강해지며 목표치에 빠르게 수렴하지만 오버슈트가 발생할 수 있습니다.
     * **미분 시간 \(\tau_D\) (Derivative)**: 급격한 온도 변화율을 억제하는 브레이크 역할.
 """)
+
+
 ---------------------------------------------------------
+
 좌측 사이드바: 슬라이더 + 숫자 직접 입력 동시 지원
+
 ---------------------------------------------------------
+
 st.sidebar.header("1. 공정 파라미터 설정")
 
 목표 온도
+
 setpoint = st.sidebar.number_input(
 "목표 온도 (℃)",
 min_value=100.0,
@@ -45,21 +57,25 @@ step=10.0,
 )
 
 시상수 tau
+
 tau = st.sidebar.number_input(
 "시상수 τ (s)", min_value=10.0, max_value=1000.0, value=300.0, step=10.0
 )
 
 공정 게인 K
+
 K_gain = st.sidebar.number_input(
 "공정 게인 K", min_value=1.0, max_value=50.0, value=16.0, step=1.0
 )
 
 시간 지연 theta
+
 delay_time = st.sidebar.number_input(
 "시간 지연 θ (s)", min_value=0.0, max_value=200.0, value=30.0, step=1.0
 )
 
 초기/외기 온도
+
 T_ambient = st.sidebar.number_input(
 "초기/외기 온도 (℃)", min_value=0.0, max_value=100.0, value=25.0, step=1.0
 )
@@ -68,6 +84,7 @@ st.sidebar.markdown("---")
 st.sidebar.header("2. PID 파라미터 튜닝")
 
 비례 게인 Kc
+
 Kc = st.sidebar.number_input(
 "비례 게인 Kc",
 min_value=0.001,
@@ -78,11 +95,13 @@ format="%.3f",
 )
 
 적분 시간 tau_I
+
 tau_I = st.sidebar.number_input(
 "적분 시간 τI (s)", min_value=1.0, max_value=2000.0, value=200.0, step=5.0
 )
 
 미분 시간 tau_D
+
 tau_D = st.sidebar.number_input(
 "미분 시간 τD (s)", min_value=0.0, max_value=200.0, value=25.0, step=1.0
 )
@@ -93,8 +112,11 @@ show_temp_graph = st.sidebar.checkbox("온도 응답 곡선 표시", value=True)
 show_heater_graph = st.sidebar.checkbox("히터 조작량(u) 곡선 표시", value=True)
 
 ---------------------------------------------------------
+
 시뮬레이션 계산 (오일러법)
+
 ---------------------------------------------------------
+
 dt = 1.0
 total_time = 5400
 n_steps = int(total_time / dt)
@@ -130,23 +152,32 @@ u[k] = u_curr
 u_delayed = u[k - delay_steps] if k >= delay_steps else 0.0
 dT_dt = (-(T[k] - T_ambient) + K_gain * u_delayed) / tau
 T[k + 1] = T[k] + dt * dT_dt
+
+
 u[-1] = u[-2]
 
 성능 지표
+
 final_error = setpoint - T[-1]
 overshoot = max(0.0, np.max(T) - setpoint) if np.max(T) > setpoint else 0.0
 
 ---------------------------------------------------------
+
 결과 화면 및 실시간 수치 카드 출력
+
 ---------------------------------------------------------
+
 col1, col2, col3 = st.columns(3)
 col1.metric("최종 도달 온도", f"{T[-1]:.2f} ℃")
 col2.metric("최종 오차 (Final Error)", f"{final_error:.2f} ℃")
 col3.metric("최대 오버슈트 (Overshoot)", f"{overshoot:.2f} ℃")
 
 ---------------------------------------------------------
+
 그래프 온오프 렌더링
+
 ---------------------------------------------------------
+
 active_plots = sum([show_temp_graph, show_heater_graph])
 
 if active_plots == 0:
