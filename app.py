@@ -2,42 +2,27 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 리눅스 서버에 설치된 나눔글꼴 적용 (packages.txt의 fonts-nanum 기준)
 plt.rcParams['font.family'] = 'NanumGothic'
 plt.rcParams['axes.unicode_minus'] = False
 
-st.set_page_config(layout="wide", page_title="FOPDT 공정 PID 튜닝 시뮬레이터")
-st.title("🎛️ FOPDT 공정 & 실시간 PID 튜닝 시뮬레이터")
+st.set_page_config(layout="wide", page_title="실시간 PID 튜닝 시뮬레이터")
+st.title("🎛️ 실시간 PID 튜닝 시뮬레이터")
 
-# ---------------------------------------------------------
-# 좌측 사이드바: 슬라이더 + 숫자 직접 입력 동시 지원
-# ---------------------------------------------------------
 st.sidebar.header("1. 공정 파라미터 설정")
 
-# 목표 온도
 setpoint = st.sidebar.number_input("목표 온도 (℃)", min_value=100.0, max_value=1500.0, value=1000.0, step=10.0)
-# 시상수 tau
 tau = st.sidebar.number_input("시상수 τ (s)", min_value=10.0, max_value=1000.0, value=300.0, step=10.0)
-# 공정 게인 K
 K_gain = st.sidebar.number_input("공정 게인 K", min_value=1.0, max_value=50.0, value=16.0, step=1.0)
-# 시간 지연 theta
 delay_time = st.sidebar.number_input("시간 지연 θ (s)", min_value=0.0, max_value=200.0, value=30.0, step=1.0)
-# 초기/외기 온도
 T_ambient = st.sidebar.number_input("초기/외기 온도 (℃)", min_value=0.0, max_value=100.0, value=25.0, step=1.0)
 
 st.sidebar.markdown("---")
 st.sidebar.header("2. PID 파라미터 튜닝")
 
-# 비례 게인 Kc
 Kc = st.sidebar.number_input("비례 게인 Kc", min_value=0.001, max_value=5.0, value=0.3, step=0.01, format="%.3f")
-# 적분 시간 tau_I
 tau_I = st.sidebar.number_input("적분 시간 τI (s)", min_value=1.0, max_value=2000.0, value=200.0, step=5.0)
-# 미분 시간 tau_D
 tau_D = st.sidebar.number_input("미분 시간 τD (s)", min_value=0.0, max_value=200.0, value=25.0, step=1.0)
 
-# ---------------------------------------------------------
-# 시뮬레이션 계산 (오일러법)
-# ---------------------------------------------------------
 dt = 1.0
 total_time = 5400
 n_steps = int(total_time / dt)
@@ -54,35 +39,29 @@ prev_error = 0.0
 for k in range(n_steps):
     e = setpoint - T[k]
 
-    # PID 계산 및 안티와인드업
     P_term = Kc * e
     D_term = Kc * tau_D * ((e - prev_error) / dt if k > 0 else 0.0)
-    
+
     I_term = (Kc / tau_I) * integral if tau_I > 0 else 0.0
     u_unsat = P_term + I_term + D_term
-    
+
     if not ((u_unsat >= 100.0 and e > 0) or (u_unsat <= 0.0 and e < 0)):
         integral += e * dt
-        
+
     I_term = (Kc / tau_I) * integral if tau_I > 0 else 0.0
     u_curr = np.clip(P_term + I_term + D_term, 0.0, 100.0)
     prev_error = e
     u[k] = u_curr
 
-    # FOPDT 모델 지연시간 적용 갱신
     u_delayed = u[k - delay_steps] if k >= delay_steps else 0.0
     dT_dt = (-(T[k] - T_ambient) + K_gain * u_delayed) / tau
     T[k + 1] = T[k] + dt * dT_dt
 
 u[-1] = u[-2]
 
-# 성능 지표
 final_error = setpoint - T[-1]
 overshoot = max(0.0, np.max(T) - setpoint) if np.max(T) > setpoint else 0.0
 
-# ---------------------------------------------------------
-# 결과 화면 및 실시간 그래프 출력
-# ---------------------------------------------------------
 col1, col2, col3 = st.columns(3)
 col1.metric("최종 도달 온도", f"{T[-1]:.2f} ℃")
 col2.metric("최종 오차 (Final Error)", f"{final_error:.2f} ℃")
